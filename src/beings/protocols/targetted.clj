@@ -1,0 +1,1 @@
+(ns beings.protocols.targetted)
