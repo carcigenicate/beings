@@ -5,8 +5,8 @@
   (hurt [self by] "Hurts the entity *by* the specified amount.")
   (health [self] "Returns the current entity health."))
 
-(defn default-heal [entity by health-key]
+(defn default-heal [health-key entity by]
   (update entity health-key #(+ % by)))
 
-(defn default-hurt [entity by health-key]
+(defn default-hurt [health-key entity by]
   (default-heal entity (- by) health-key))
