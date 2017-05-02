@@ -1,7 +1,6 @@
 (ns beings.entities.being
   (:require [beings.protocols.has-health :as hP]
             [beings.protocols.movable :as mP]
-            [beings.protocols.targetted :as tP]
             [beings.protocols.positional :as pP]
 
             [helpers.general-helpers :as h]))
@@ -16,10 +15,6 @@
 
   mP/Movable
   {:move-by (partial mP/default-move-by :position)}
-
-  tP/Targetted
-  {:get-target #(get % :target)
-   :set-target #(assoc % :target [%2 %3])}
 
   pP/Positional
   {:get-position #(get % :position)

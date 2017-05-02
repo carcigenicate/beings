@@ -3,7 +3,10 @@
             [quil.middleware :as m]
 
             [beings.entities.being :as b]
-            [beings.protocols.targetted :as tP])
+            [beings.protocols.targetted :as tP]
+            [beings.protocols.movable :as mP]
+
+            [helpers.general-helpers :as g])
 
   (:gen-class))
 
@@ -15,9 +18,10 @@
                      5 nil)})
 
 (defn update-state [state]
+  #_
   (update state :being
     #(if (:target %)
-       (tP/move-to-target % (:speed %))
+       (mP/move-towards % (:speed %))
        %)))
 
 (defn draw-state [state]
@@ -26,6 +30,7 @@
     (q/ellipse x y 100 100)))
 
 (defn mouse-handler [state event]
+  #_
   (let [{x :x y :y} event]
     (update state :being
       #(tP/set-target % x y))))

@@ -2,7 +2,6 @@
   (:require [beings.entities.being :as b]
 
             [beings.protocols.positional :as pP]
-            [beings.protocols.targetted :as tP]
             [beings.protocols.movable :as mP]
             [beings.protocols.has-health :as hP]
 
