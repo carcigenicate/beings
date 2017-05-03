@@ -1,6 +1,7 @@
 (ns beings.grid-collosion-manager
   (:require [beings.protocols.positional :as pP]
             [helpers.point-helpers :as ph])
+
   (:import [beings.protocols.positional Positional]))
 
 (defrecord Grid-Manager [cells grid-dimensions area-dimensions])
