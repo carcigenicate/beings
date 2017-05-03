@@ -1,6 +1,7 @@
 (ns beings.grid-collosion-manager
   (:require [beings.protocols.positional :as pP]
-            [helpers.point-helpers :as ph])
+            [helpers.point-helpers :as ph]
+            [helpers.general-helpers :as g])
 
   (:import [beings.protocols.positional Positional]))
 
@@ -17,11 +18,9 @@
 (defn grid-cell-real-area
   "Returns how much of the area each grid cell represents in each dimension."
   [grid-dimensions area-dimensions]
-  (let [[gw gh] grid-dimensions
-        [aw ah] area-dimensions]
-    [(/ aw gw) (/ ah gh)]))
+  (ph/div-pts area-dimensions grid-dimensions))
 
-(defn get-grid-cell-for-position2
+(defn grid-cell-for-position
   "Returns which cell of the grid the position should occupy."
   [grid position]
   (let [{gd :grid-dimensions ad :area-dimensions} grid]
@@ -29,4 +28,6 @@
          (ph/div-pts position)
          (mapv int))))
 
-(defn add-positional [grid ^Positional positional])
+(defn add-positional [grid ^Positional positional]
+  (let [pos (pP/get-position positional)
+        grid-pos (grid-cell-for-position grid positional)]))
