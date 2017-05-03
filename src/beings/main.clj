@@ -3,37 +3,38 @@
             [quil.middleware :as m]
 
             [beings.entities.being :as b]
-            [beings.protocols.targetted :as tP]
             [beings.protocols.movable :as mP]
+            [beings.environment :as e]
 
             [helpers.general-helpers :as g])
 
   (:gen-class))
 
-(def width 1000)
-(def height 1000)
+(def width 2500)
+(def height 1500)
+
+(def global-rand-gen (g/new-rand-gen 99))
+
+(defrecord State [enviro])
 
 (defn setup-state []
-  {:being (b/->Being 100 [(/ width 2) (/ height 2)]
-                     5 nil)})
+  {:beings (e/new-beings 20 [width height] global-rand-gen)})
 
 (defn update-state [state]
-  #_
-  (update state :being
-    #(if (:target %)
-       (mP/move-towards % (:speed %))
-       %)))
+  state)
 
 (defn draw-state [state]
   (q/background 150 150 150)
-  (let [{{[x y] :position} :being} state]
-    (q/ellipse x y 100 100)))
 
-(defn mouse-handler [state event]
-  #_
-  (let [{x :x y :y} event]
-    (update state :being
-      #(tP/set-target % x y))))
+  (let [beings (:beings state)]
+    (doseq [being beings]
+      (let [[x y] (:position being)]
+        (q/ellipse x y 100 100)))))
+
+(defn mouse-handler [state {x :x y :y}]
+  (update state :beings
+    (partial mapv
+             #(mP/move-towards % [x y] (g/random-double 0 10 global-rand-gen)))))
 
 (defn -main []
   (q/defsketch Beings-Test
@@ -43,6 +44,6 @@
                :update update-state
                :draw draw-state
 
-               :mouse-clicked mouse-handler
+               :mouse-dragged mouse-handler
 
                :middleware [m/fun-mode]))

@@ -5,7 +5,7 @@
 
             [helpers.general-helpers :as h]))
 
-(defrecord Being [health position speed target])
+(defrecord Being [health position speed])
 
 (extend Being
   hP/Has-Health
