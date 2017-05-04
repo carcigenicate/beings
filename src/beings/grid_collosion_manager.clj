@@ -5,11 +5,24 @@
 
   (:import [beings.protocols.positional Positional]))
 
-(defrecord Grid-Manager [cells grid-dimensions area-dimensions])
+(declare format-grid)
+(defrecord Grid-Manager [cells grid-dimensions area-dimensions]
+  Object
+  (toString [self] (format-grid self)))
+
+(defn index-of [x y width]
+  (+ x (* y width)))
+
+(defn cell-index [grid x y]
+  (index-of x y
+            (first (:grid-dimensions grid))))
+
+(defn new-cells [width height]
+  (vec (repeat (* width height) [])))
 
 (defn new-grid [grid-dimensions area-dimensions]
   (let [[gw gh] grid-dimensions]
-    (->Grid-Manager (repeat (* gw gh) nil)
+    (->Grid-Manager (new-cells gw gh)
                     grid-dimensions
                     area-dimensions)))
 
@@ -30,4 +43,17 @@
 
 (defn add-positional [grid ^Positional positional]
   (let [pos (pP/get-position positional)
-        grid-pos (grid-cell-for-position grid positional)]))
+        [gx gy] (grid-cell-for-position grid pos)]
+    (update-in grid [:cells (cell-index grid gx gy)] #(conj % positional))))
+
+; move-in-grid. Return just the moved grid
+; move-with-grid. Return the moved entity, and the modified grid
+
+; move-by-with-grid. Return the offset moved entity and the modified grid.
+
+(defn format-grid [grid]
+  (let [cells (:cells grid)
+        width (first (:grid-dimensions grid))]
+    (clojure.string/join "\n"
+       (mapv vec
+             (partition width cells)))))

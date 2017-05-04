@@ -1,5 +1,6 @@
 (ns beings.environment
   (:require [beings.entities.being :as b]
+            [beings.grid-collosion-manager :as cm]
 
             [beings.protocols.positional :as pP]
             [beings.protocols.movable :as mP]
