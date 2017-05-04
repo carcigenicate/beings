@@ -3,10 +3,10 @@
             [quil.middleware :as m]
 
             [beings.entities.being :as b]
-            [beings.protocols.movable :as mP]
             [beings.environment :as e]
 
-            [helpers.general-helpers :as g])
+            [helpers.general-helpers :as g]
+            [beings.protocols.positional :as pP])
 
   (:gen-class))
 
@@ -33,8 +33,8 @@
 
 (defn mouse-handler [state {x :x y :y}]
   (update state :beings
-    (partial mapv
-             #(mP/move-towards % [x y] (g/random-double 0 10 global-rand-gen)))))
+          (partial mapv
+            #(pP/move-towards % [x y] (g/random-double 0 10 global-rand-gen)))))
 
 (defn -main []
   (q/defsketch Beings-Test
