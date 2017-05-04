@@ -5,6 +5,8 @@
 
   (:import [beings.protocols.positional Positional]))
 
+(def position-match-epsilon 0.001)
+
 (declare format-grid)
 (defrecord Grid-Manager [cells grid-dimensions area-dimensions]
   Object
@@ -46,7 +48,14 @@
         [gx gy] (grid-cell-for-position grid pos)]
     (update-in grid [:cells (cell-index grid gx gy)] #(conj % positional))))
 
+(defn position-matches? [pos1 pos2]
+  (let [abs #(Math/abs ^double %)
+        [x-diff y-diff] (mapv #(abs (- % %2)) pos1 pos2)]
+    (and (< x-diff position-match-epsilon)
+         (< y-diff position-match-epsilon))))
+
 ; move-in-grid. Return just the moved grid
+(defn move-in-grid [grid positional])
 ; move-with-grid. Return the moved entity, and the modified grid
 
 ; move-by-with-grid. Return the offset moved entity and the modified grid.
