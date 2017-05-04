@@ -1,6 +1,5 @@
 (ns beings.entities.being
   (:require [beings.protocols.has-health :as hP]
-            [beings.protocols.movable :as mP]
             [beings.protocols.positional :as pP]
 
             [helpers.general-helpers :as h]))
@@ -10,11 +9,7 @@
 (extend Being
   hP/Has-Health
   {:heal (partial hP/default-heal :health)
-   :hurt (partial hP/default-hurt :health)
-   :health :health}
-
-  mP/Movable
-  {:move-by (partial mP/default-move-by :position)}
+   :hurt (partial hP/default-hurt :health)}
 
   pP/Positional
   {:get-position #(get % :position)
