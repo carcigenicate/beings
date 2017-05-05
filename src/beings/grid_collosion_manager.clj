@@ -5,6 +5,8 @@
 
   (:import [beings.protocols.positional Positional]))
 
+; TODO: Repeated calls to pP/get-position creates unnecessary vectors?
+
 (def position-match-epsilon 0.001)
 
 (declare format-grid)
@@ -56,6 +58,12 @@
           nil
           (map vector (range) cell-contents)))
 
+(defn- affect-cell-holding-positional [^Grid grid ^Positional positional f]
+  (let [current-position (pP/get-position positional)
+        [cell-x cell-y] (grid-cell-for-position grid current-position)
+        cell-i (cell-index grid cell-x cell-y)]
+    (update-in grid [:cells cell-i] f)))
+
 (defn add-positional [^Grid grid ^Positional positional]
   (let [pos (pP/get-position positional)
         [gx gy] (grid-cell-for-position grid pos)]
@@ -66,6 +74,14 @@
         ()
         found-i? (matching-index)]))
 
+(defn move-with-grid
+  "Returns a pair of [new-grid new-positional] where the given positional has been moved to the new position, and whose new position is reflected in the returned new-grid."
+  [^Grid grid ^Positional positional new-x new-y]
+  (affect-cell-holding-positional grid positional
+    #(let [position (pP/get-position positional)
+           found-i? (matching-index % position)])))
+
+#_
 (defn move-with-grid
   "Returns a pair of [new-grid new-positional] where the given positional has been moved to the new position, and whose new position is reflected in the returned new-grid."
   [^Grid grid ^Positional positional new-x new-y]
