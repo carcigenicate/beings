@@ -79,7 +79,16 @@
   [^Grid grid ^Positional positional new-x new-y]
   (affect-cell-holding-positional grid positional
     #(let [position (pP/get-position positional)
-           found-i? (matching-index % position)])))
+           found-i? (matching-index % position)
+           positional' (pP/set-position positional new-x new-y)]
+       (if found-i?
+         (assoc % positional')
+
+         (throw (IllegalStateException.
+                  (str "Tried to move a Positional that wasn't already in the grid, "
+                       "or was previously moved incorrectly: " positional)))))))
+
+
 
 #_
 (defn move-with-grid
