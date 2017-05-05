@@ -5,6 +5,10 @@
 
   (:import [beings.protocols.positional Positional]))
 
+; TODO: Repeated calls to pP/get-position creates many vectors?
+; TODO: Duplication for cell contents? Key holds data already held in the value.
+; TODO: Doubles for map keys a problem? Floating point error may prevent it from being seen.
+
 (def position-match-epsilon 0.001)
 
 (declare format-grid)
@@ -54,24 +58,32 @@
               (reduced i)
               d))
           nil
-          (map vector (range) cell-contents)))
+          (map vector (range) cell-contents))) ;TODO: Wrap with (seq)?
 
 (defn add-positional [^Grid grid ^Positional positional]
   (let [pos (pP/get-position positional)
         [gx gy] (grid-cell-for-position grid pos)]
-    (update-in grid [:cells (cell-index grid gx gy)] #(conj % positional))))
+    (update-in grid [:cells (cell-index grid gx gy)] #(assoc % pos positional))))
 #_
 (defn remove-positional [^Grid grid ^Positional positional]
   (let [{cells :cells} grid
         ()
         found-i? (matching-index)]))
 
+(defn- move-in-cells [cells old-cell-pos new-cell-pos]
+  (if (= old-cell-pos new-cell-pos)
+    cells
+    (let [])))
+
 (defn move-with-grid
   "Returns a pair of [new-grid new-positional] where the given positional has been moved to the new position, and whose new position is reflected in the returned new-grid."
   [^Grid grid ^Positional positional new-x new-y]
   (let [{cells :cells} grid
         current-position (pP/get-position positional)
+
         [cell-x cell-y] (grid-cell-for-position grid current-position)
+        [new-cell-x new-cell-y] (grid-cell-for-position grid [new-x new-y])
+
         cell-i (cell-index grid cell-x cell-y)
         found-i? (matching-index (get cells cell-i) current-position)
         positional' (pP/set-position positional new-x new-y)]
