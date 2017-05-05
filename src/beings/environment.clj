@@ -3,7 +3,6 @@
             [beings.grid-collosion-manager :as cm]
 
             [beings.protocols.positional :as pP]
-            [beings.protocols.movable :as mP]
             [beings.protocols.has-health :as hP]
 
             [helpers.point-helpers :as ph]

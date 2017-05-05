@@ -42,11 +42,6 @@
          (ph/div-pts position)
          (mapv int))))
 
-(defn add-positional [^Grid grid ^Positional positional]
-  (let [pos (pP/get-position positional)
-        [gx gy] (grid-cell-for-position grid pos)]
-    (update-in grid [:cells (cell-index grid gx gy)] #(conj % positional))))
-
 (defn- position-matches? [pos1 pos2]
   (let [abs #(Math/abs ^double %)
         [x-diff y-diff] (mapv #(abs (- % %2)) pos1 pos2)]
@@ -60,6 +55,16 @@
               d))
           nil
           (map vector (range) cell-contents)))
+
+(defn add-positional [^Grid grid ^Positional positional]
+  (let [pos (pP/get-position positional)
+        [gx gy] (grid-cell-for-position grid pos)]
+    (update-in grid [:cells (cell-index grid gx gy)] #(conj % positional))))
+#_
+(defn remove-positional [^Grid grid ^Positional positional]
+  (let [{cells :cells} grid
+        ()
+        found-i? (matching-index)]))
 
 (defn move-with-grid
   "Returns a pair of [new-grid new-positional] where the given positional has been moved to the new position, and whose new position is reflected in the returned new-grid."
