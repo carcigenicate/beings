@@ -24,7 +24,7 @@
             (first (:grid-dimensions grid))))
 
 (defn- new-cells [width height]
-  (vec (repeat (* width height) [])))
+  (vec (repeat (* width height) {})))
 
 (defn- new-grid [grid-dimensions area-dimensions]
   (->Grid (apply new-cells grid-dimensions)
@@ -52,28 +52,29 @@
     (and (< x-diff position-match-epsilon)
          (< y-diff position-match-epsilon))))
 
-(defn- matching-index [cell-contents position]
-  (reduce (fn [d [i posi]]
-            (if (position-matches? (pP/get-position posi) position)
-              (reduced i)
-              d))
-          nil
-          (map vector (range) cell-contents))) ;TODO: Wrap with (seq)?
-
 (defn add-positional [^Grid grid ^Positional positional]
   (let [pos (pP/get-position positional)
         [gx gy] (grid-cell-for-position grid pos)]
     (update-in grid [:cells (cell-index grid gx gy)] #(assoc % pos positional))))
-#_
+
 (defn remove-positional [^Grid grid ^Positional positional]
   (let [{cells :cells} grid
-        ()
-        found-i? (matching-index)]))
+        position (pP/get-position positional)
+        [gw gy] (grid-cell-for-position grid position)]
+    (update-in grid [:cells (cell-index grid gw gy)]
+               #(dissoc % position))))
 
-(defn- move-in-cells [cells old-cell-pos new-cell-pos]
+(defn- move-in-grid
+  "If the new and old cell positions are the same, nothing happens, else the old positional is removed from it's current cell, and the new version is placed"
+  [^Grid grid old-positional new-positional old-cell-pos new-cell-pos]
   (if (= old-cell-pos new-cell-pos)
-    cells
-    (let [])))
+    (let [old-pos (pP/get-position old-positional)
+          new-pos (pP/get-position new-positional)]
+      (a))
+
+    (-> grid
+        (remove-positional old-positional)
+        (add-positional new-positional))))
 
 (defn move-with-grid
   "Returns a pair of [new-grid new-positional] where the given positional has been moved to the new position, and whose new position is reflected in the returned new-grid."
@@ -81,12 +82,13 @@
   (let [{cells :cells} grid
         current-position (pP/get-position positional)
 
-        [cell-x cell-y] (grid-cell-for-position grid current-position)
-        [new-cell-x new-cell-y] (grid-cell-for-position grid [new-x new-y])
+        [cell-x cell-y :as grid-pos] (grid-cell-for-position grid current-position)
+        [new-cell-x new-cell-y :as new-grid-pos] (grid-cell-for-position grid [new-x new-y])
 
         cell-i (cell-index grid cell-x cell-y)
-        found-i? (matching-index (get cells cell-i) current-position)
-        positional' (pP/set-position positional new-x new-y)]
+        positional' (pP/set-position positional new-x new-y)
+
+        grid' (move-in-grid grid positional positional' grid-pos new-grid-pos)]
 
     (if found-i?
       [(assoc-in grid [:cells cell-i found-i?] positional')
