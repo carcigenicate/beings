@@ -12,7 +12,7 @@
 (def position-match-epsilon 0.001)
 
 (declare format-grid)
-(defrecord Grid [cells grid-dimensions area-dimensions]
+(defrecord Grid [cells grid-side-length area-dimensions]
   Object
   (toString [self] (format-grid self)))
 
@@ -21,28 +21,28 @@
 
 (defn- cell-index [grid x y]
   (index-of x y
-            (first (:grid-dimensions grid))))
+            (:grid-side-length grid)))
 
 (defn- new-cells [width height]
   (vec (repeat (* width height) [])))
 
-(defn- new-grid [grid-dimensions area-dimensions]
-  (->Grid (apply new-cells grid-dimensions)
-          grid-dimensions
+(defn- new-grid [grid-side-length area-dimensions]
+  (->Grid (new-cells grid-side-length grid-side-length)
+          grid-side-length
           area-dimensions))
 
 ; TODO: Memoize?
 ; TODO: Figure out a better name.
 (defn- grid-cell-real-area
   "Returns how much of the area each grid cell represents in each dimension."
-  [grid-dimensions area-dimensions]
-  (ph/div-pts area-dimensions grid-dimensions))
+  [grid-side-length area-dimensions]
+  (mapv #(/ % grid-side-length) area-dimensions))
 
 (defn- grid-cell-for-position
   "Returns which cell of the grid the position should occupy."
   [grid position]
-  (let [{gd :grid-dimensions ad :area-dimensions} grid]
-    (->> (grid-cell-real-area gd ad)
+  (let [{side-length :grid-side-length ad :area-dimensions} grid]
+    (->> (grid-cell-real-area side-length ad)
          (ph/div-pts position)
          (mapv int))))
 
@@ -122,9 +122,9 @@
     (move-by-with-grid grid positional x-off y-off)))
 
 (defn inbounds? [^Grid grid x y]
-  (let [[w h] (:grid-dimensions grid)]
-    (and (< -1 x w)
-         (< -1 y h))))
+  (let [width (:grid-side-length grid)]
+    (and (< -1 x width)
+         (< -1 y width))))
 
 (defn cells-surrounding [^Grid grid x y depth]
   (for [y' (range (- y depth) (inc (+ y depth)))
@@ -141,13 +141,14 @@
 
 (defn format-grid [^Grid grid]
   (let [cells (:cells grid)
-        width (first (:grid-dimensions grid))]
+        width (:grid-side-length grid)]
     (clojure.string/join "\n"
        (mapv vec
              (partition width cells)))))
 
+#_
 (def test-grid
   (let [p pP/->Test-Positional
         p1 (p 99 99)]
-    (-> (new-grid [3 3] [100 100])
+    (-> (new-grid 10 [100 100])
       (add-positional p1))))
