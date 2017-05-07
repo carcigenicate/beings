@@ -24,3 +24,9 @@
   (let [position (get-position movable-positional)
         [x-off y-off] (offsets-to-target position target by)]
     (move-by movable-positional x-off y-off)))
+
+
+(defrecord Test-Positional [x y]
+  Positional
+  (get-position [self] [x y])
+  (set-position [self x y] (->Test-Positional x y)))

@@ -46,6 +46,10 @@
          (ph/div-pts position)
          (mapv int))))
 
+(defn- grid-index-for-position [grid position]
+  (apply cell-index grid
+         (grid-cell-for-position grid position)))
+
 (defn- position-matches? [pos1 pos2]
   (let [abs #(Math/abs ^double %)
         [x-diff y-diff] (mapv #(abs (- % %2)) pos1 pos2)]
@@ -58,39 +62,45 @@
               (reduced i)
               d))
           nil
-          (map vector (range) cell-contents))) ;TODO: Wrap with (seq)?
+          (map vector (range) cell-contents)))
 
 (defn add-positional [^Grid grid ^Positional positional]
   (let [pos (pP/get-position positional)
         [gx gy] (grid-cell-for-position grid pos)]
-    (update-in grid [:cells (cell-index grid gx gy)] #(assoc % pos positional))))
+    (update-in grid [:cells (cell-index grid gx gy)] #(conj % positional))))
 #_
 (defn remove-positional [^Grid grid ^Positional positional]
   (let [{cells :cells} grid
         ()
         found-i? (matching-index)]))
 
-(defn- move-in-cells [cells old-cell-pos new-cell-pos]
-  (if (= old-cell-pos new-cell-pos)
-    cells
-    (let [])))
+(defn- remove-from-vector [v i]
+  (into (subvec v 0 i) (subvec v (inc i))))
 
+(defn- move-in-cells [cells old-cell-i new-positional old-grid-position new-grid-position]
+  (-> cells
+      (update old-grid-position #(remove-from-vector % old-cell-i))
+      (update new-grid-position #(conj % new-positional))))
+
+; TODO: EWW
 (defn move-with-grid
   "Returns a pair of [new-grid new-positional] where the given positional has been moved to the new position, and whose new position is reflected in the returned new-grid."
   [^Grid grid ^Positional positional new-x new-y]
   (let [{cells :cells} grid
         current-position (pP/get-position positional)
 
-        [cell-x cell-y] (grid-cell-for-position grid current-position)
-        [new-cell-x new-cell-y] (grid-cell-for-position grid [new-x new-y])
-
-        cell-i (cell-index grid cell-x cell-y)
-        found-i? (matching-index (get cells cell-i) current-position)
-        positional' (pP/set-position positional new-x new-y)]
+        grid-i (grid-index-for-position grid current-position)
+        new-grid-i (grid-index-for-position grid [new-x new-y])
+        
+        found-i? (matching-index (get cells grid-i) current-position)]
 
     (if found-i?
-      [(assoc-in grid [:cells cell-i found-i?] positional')
-       positional']
+      (let [positional' (pP/set-position positional new-x new-y)
+            cells' (if (= grid-i new-grid-i)
+                     (assoc-in grid [:cells new-grid-i found-i?] positional')
+                     (move-in-cells cells found-i? positional' grid-i new-grid-i))]
+        [(assoc grid :cells cells')
+         positional'])
 
       (throw (IllegalStateException.
                (str "Tried to move a Positional that wasn't already in the grid, "
@@ -111,9 +121,33 @@
         [x-off y-off] (pP/offsets-to-target pos [target-x target-y] by)]
     (move-by-with-grid grid positional x-off y-off)))
 
+(defn inbounds? [^Grid grid x y]
+  (let [[w h] (:grid-dimensions grid)]
+    (and (< -1 x w)
+         (< -1 y h))))
+
+(defn cells-surrounding [^Grid grid x y depth]
+  (for [y' (range (- y depth) (inc (+ y depth)))
+        x' (range (- x depth) (inc (+ x depth)))
+        :when (and (not (and (= x x') (= y y')))
+                   (inbounds? grid x' y'))]
+    [x' y']))
+
+(defn find-colliding [^Grid grid ^Positional positional search-radius]
+  (let [position (pP/get-position positional)
+        [grid-x grid-y] (grid-cell-for-position grid position)
+        grid-radius ()
+        surrounding (cells-surrounding grid grid-x grid-y 1)]))
+
 (defn format-grid [^Grid grid]
   (let [cells (:cells grid)
         width (first (:grid-dimensions grid))]
     (clojure.string/join "\n"
        (mapv vec
              (partition width cells)))))
+
+(def test-grid
+  (let [p pP/->Test-Positional
+        p1 (p 99 99)]
+    (-> (new-grid [3 3] [100 100])
+      (add-positional p1))))
