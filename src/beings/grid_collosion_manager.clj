@@ -23,6 +23,9 @@
   (index-of x y
             (:grid-side-length grid)))
 
+(defn- get-cell [grid x y]
+  (get (:cells grid) (cell-index grid x y)))
+
 (defn- new-cells [width height]
   (vec (repeat (* width height) [])))
 
@@ -121,23 +124,45 @@
         [x-off y-off] (pP/offsets-to-target pos [target-x target-y] by)]
     (move-by-with-grid grid positional x-off y-off)))
 
-(defn inbounds? [^Grid grid x y]
-  (let [width (:grid-side-length grid)]
-    (and (< -1 x width)
-         (< -1 y width))))
+(defn inbounds? [grid-side-length x y]
+  (and (< -1 x grid-side-length)
+       (< -1 y grid-side-length)))
 
-(defn cells-surrounding [^Grid grid x y depth]
-  (for [y' (range (- y depth) (inc (+ y depth)))
-        x' (range (- x depth) (inc (+ x depth)))
-        :when (and (not (and (= x x') (= y y')))
-                   (inbounds? grid x' y'))]
-    [x' y']))
+(defn surrounding-coords [grid-side-length grid-x grid-y depth]
+  (for [y (range (- grid-y depth) (inc (+ grid-y depth)))
+        x (range (- grid-x depth) (inc (+ grid-x depth)))
+        :when (and (not (and (= grid-x x) (= grid-y y)))
+                   (inbounds? grid-side-length x y))]
+    [x y]))
+
+(defn surrounding-cells [^Grid grid grid-x grid-y depth]
+  (let [side-length (:grid-side-length grid)]
+    (->> (surrounding-coords side-length grid-x grid-y depth)
+      (map (fn [[x y]] (get-cell grid x y))))))
+
+(defn grid-radius [grid-side-length search-radius]
+  (Math/ceil ^double
+             (/ search-radius grid-side-length)))
+
+(defn search-cell-for-collisions [cell position search-radius]
+  (filter #(let [pos (pP/get-position %)]
+             (< (ph/distance-between-pts pos position) search-radius))
+          cell))
+
+(defn search-cells-for-collisions [cells-to-check position search-radius]
+  (reduce (fn [acc cell]
+            (concat acc
+                    (search-cell-for-collisions cell position search-radius)))
+          '()
+          cells-to-check))
 
 (defn find-colliding [^Grid grid ^Positional positional search-radius]
-  (let [position (pP/get-position positional)
+  (let [{grid-width :grid-side-length} grid
+        position (pP/get-position positional)
         [grid-x grid-y] (grid-cell-for-position grid position)
-        grid-radius ()
-        surrounding (cells-surrounding grid grid-x grid-y 1)]))
+        g-radius (grid-radius grid-width search-radius)
+        cells-to-search (surrounding-cells grid grid-x grid-y g-radius)]
+    (search-cells-for-collisions cells-to-search position search-radius)))
 
 (defn format-grid [^Grid grid]
   (let [cells (:cells grid)
@@ -146,7 +171,6 @@
        (mapv vec
              (partition width cells)))))
 
-#_
 (def test-grid
   (let [p pP/->Test-Positional
         p1 (p 99 99)]
