@@ -12,7 +12,7 @@
 (def position-match-epsilon 0.001)
 
 (declare format-grid)
-(defrecord Grid [cells grid-side-length area-dimensions]
+(defrecord Grid [cells grid-side-length area-side-length]
   Object
   (toString [self] (format-grid self)))
 
@@ -23,31 +23,36 @@
   (index-of x y
             (:grid-side-length grid)))
 
-(defn- get-cell [grid x y]
+(defn- get-cell
+  "Returns the given cell. Will return null if either x or y is a non-integer."
+  [grid x y]
   (get (:cells grid) (cell-index grid x y)))
 
 (defn- new-cells [width height]
   (vec (repeat (* width height) [])))
 
-(defn- new-grid [grid-side-length area-dimensions]
+(defn- new-grid [grid-side-length area-side-length]
   (->Grid (new-cells grid-side-length grid-side-length)
           grid-side-length
-          area-dimensions))
+          area-side-length))
 
-; TODO: Memoize?
+(defn cant-find-positional-exception [positional operation-type]
+  (IllegalStateException.
+    (str "Tried to " operation-type " a Positional that wasn't already in the grid, "
+         "or was previously moved incorrectly: " positional)))
+
 ; TODO: Figure out a better name.
 (defn- grid-cell-real-area
-  "Returns how much of the area each grid cell represents in each dimension."
-  [grid-side-length area-dimensions]
-  (mapv #(/ % grid-side-length) area-dimensions))
+  "Returns the ratio of the actual area to the grid area"
+  [grid-side-length area-side-length]
+  (/ grid-side-length area-side-length))
 
 (defn- grid-cell-for-position
   "Returns which cell of the grid the position should occupy."
   [grid position]
-  (let [{side-length :grid-side-length ad :area-dimensions} grid]
-    (->> (grid-cell-real-area side-length ad)
-         (ph/div-pts position)
-         (mapv int))))
+  (let [{grid-width :grid-side-length area-width :area-side-length} grid
+        ratio (grid-cell-real-area grid-width area-width)]
+    (mapv #(int (* % ratio)) position)))
 
 (defn- grid-index-for-position [grid position]
   (apply cell-index grid
@@ -59,7 +64,10 @@
     (and (< x-diff position-match-epsilon)
          (< y-diff position-match-epsilon))))
 
-(defn- matching-index [cell-contents position]
+(defn- find-index-of-positional
+  "Returns the first Positional found that matches the given position.
+  Returns nil if no matching Positional is found."
+  [cell-contents position]
   (reduce (fn [d [i posi]]
             (if (position-matches? (pP/get-position posi) position)
               (reduced i)
@@ -71,14 +79,22 @@
   (let [pos (pP/get-position positional)
         [gx gy] (grid-cell-for-position grid pos)]
     (update-in grid [:cells (cell-index grid gx gy)] #(conj % positional))))
-#_
-(defn remove-positional [^Grid grid ^Positional positional]
-  (let [{cells :cells} grid
-        ()
-        found-i? (matching-index)]))
 
 (defn- remove-from-vector [v i]
   (into (subvec v 0 i) (subvec v (inc i))))
+
+(defn remove-positional [^Grid grid ^Positional positional]
+  (let [{cells :cells} grid
+        [x y :as pos] (pP/get-position positional)
+        [grid-x grid-y] (grid-cell-for-position grid pos)
+        cell-i (cell-index grid grid-x grid-y)
+        cell (get cells cell-i)
+        found-i? (find-index-of-positional cell pos)]
+    (if found-i?
+      (update-in grid [:cells cell-i]
+                 #(remove-from-vector % found-i?))
+
+      (throw (cant-find-positional-exception positional "remove")))))
 
 (defn- move-in-cells [cells old-cell-i new-positional old-grid-position new-grid-position]
   (-> cells
@@ -95,7 +111,7 @@
         grid-i (grid-index-for-position grid current-position)
         new-grid-i (grid-index-for-position grid [new-x new-y])
         
-        found-i? (matching-index (get cells grid-i) current-position)]
+        found-i? (find-index-of-positional (get cells grid-i) current-position)]
 
     (if found-i?
       (let [positional' (pP/set-position positional new-x new-y)
@@ -105,9 +121,7 @@
         [(assoc grid :cells cells')
          positional'])
 
-      (throw (IllegalStateException.
-               (str "Tried to move a Positional that wasn't already in the grid, "
-                    "or was previously moved incorrectly: " positional))))))
+      (throw (cant-find-positional-exception positional "move")))))
 
 ; move-by-with-grid. Return the offset moved entity and the modified grid.
 (defn move-by-with-grid
@@ -131,8 +145,7 @@
 (defn surrounding-coords [grid-side-length grid-x grid-y depth]
   (for [y (range (- grid-y depth) (inc (+ grid-y depth)))
         x (range (- grid-x depth) (inc (+ grid-x depth)))
-        :when (and (not (and (= grid-x x) (= grid-y y)))
-                   (inbounds? grid-side-length x y))]
+        :when (inbounds? grid-side-length x y)]
     [x y]))
 
 (defn surrounding-cells [^Grid grid grid-x grid-y depth]
@@ -140,13 +153,14 @@
     (->> (surrounding-coords side-length grid-x grid-y depth)
       (map (fn [[x y]] (get-cell grid x y))))))
 
-(defn grid-radius [grid-side-length search-radius]
-  (Math/ceil ^double
-             (/ search-radius grid-side-length)))
+(defn grid-radius [^Grid grid search-radius]
+  (let [{grid-width :grid-side-length area-width :area-side-length} grid]
+    (int (Math/ceil ^double
+                    (/ search-radius (/ area-width grid-width))))))
 
 (defn search-cell-for-collisions [cell position search-radius]
   (filter #(let [pos (pP/get-position %)]
-             (< (ph/distance-between-pts pos position) search-radius))
+             (<= (ph/distance-between-pts pos position) search-radius))
           cell))
 
 (defn search-cells-for-collisions [cells-to-check position search-radius]
@@ -160,7 +174,7 @@
   (let [{grid-width :grid-side-length} grid
         position (pP/get-position positional)
         [grid-x grid-y] (grid-cell-for-position grid position)
-        g-radius (grid-radius grid-width search-radius)
+        g-radius (grid-radius grid search-radius)
         cells-to-search (surrounding-cells grid grid-x grid-y g-radius)]
     (search-cells-for-collisions cells-to-search position search-radius)))
 
@@ -169,10 +183,21 @@
         width (:grid-side-length grid)]
     (clojure.string/join "\n"
        (mapv vec
-             (partition width cells)))))
+             (partition width
+               (map #(map pP/get-position %) cells))))))
+
+(def collider
+  (pP/->Test-Positional 2 2))
 
 (def test-grid
   (let [p pP/->Test-Positional
-        p1 (p 99 99)]
-    (-> (new-grid 10 [100 100])
-      (add-positional p1))))
+        a add-positional]
+    (-> (new-grid 5 10)
+      (a (p 1 1))
+      (a (p 2 2))
+
+      (a (p 9 9))
+
+      (a (p 3 1))
+      (a (p 5 7))
+      (a (p 6 3)))))

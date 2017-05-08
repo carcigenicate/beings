@@ -10,8 +10,11 @@
 
   (:gen-class))
 
-(def width 2500)
+(def width 1500)
 (def height 1500)
+
+
+(def being-size 100)
 
 (def global-rand-gen (g/new-rand-gen 99))
 
@@ -19,6 +22,13 @@
 
 (defn setup-state []
   {:beings (e/new-beings 20 [width height] global-rand-gen)})
+
+(defn resolve-collision [beings being])
+
+
+(defn resolve-collisions [beings]
+  (mapv #()
+        beings))
 
 (defn update-state [state]
   state)
@@ -28,7 +38,7 @@
 
   (let [beings (:beings state)]
     (doseq [being beings]
-      (let [[x y] (:position being)]
+      (let [[x y] (pP/get-position being)]
         (q/ellipse x y 100 100)))))
 
 (defn mouse-handler [state {x :x y :y}]
