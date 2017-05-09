@@ -31,7 +31,7 @@
 (defn- new-cells [width height]
   (vec (repeat (* width height) [])))
 
-(defn- new-grid [grid-side-length area-side-length]
+(defn new-grid [grid-side-length area-side-length]
   (->Grid (new-cells grid-side-length grid-side-length)
           grid-side-length
           area-side-length))
@@ -47,7 +47,7 @@
   [grid-side-length area-side-length]
   (/ grid-side-length area-side-length))
 
-(defn- grid-cell-for-position
+(defn grid-cell-for-position ; TODO: Re-privitize
   "Returns which cell of the grid the position should occupy."
   [grid position]
   (let [{grid-width :grid-side-length area-width :area-side-length} grid
@@ -79,6 +79,9 @@
   (let [pos (pP/get-position positional)
         [gx gy] (grid-cell-for-position grid pos)]
     (update-in grid [:cells (cell-index grid gx gy)] #(conj % positional))))
+
+(defn add-positionals [^Grid grid positionals]
+  (reduce add-positional grid positionals))
 
 (defn- remove-from-vector [v i]
   (into (subvec v 0 i) (subvec v (inc i))))
@@ -153,6 +156,10 @@
     (->> (surrounding-coords side-length grid-x grid-y depth)
       (map (fn [[x y]] (get-cell grid x y))))))
 
+(defn filter-own-cell [cells position]
+  (remove #(position-matches? (pP/get-position %) position)
+          cells))
+
 (defn grid-radius [^Grid grid search-radius]
   (let [{grid-width :grid-side-length area-width :area-side-length} grid]
     (int (Math/ceil ^double
@@ -166,7 +173,8 @@
 (defn search-cells-for-collisions [cells-to-check position search-radius]
   (reduce (fn [acc cell]
             (concat acc
-                    (search-cell-for-collisions cell position search-radius)))
+                    (search-cell-for-collisions (filter-own-cell cell position)
+                                                position search-radius)))
           '()
           cells-to-check))
 
